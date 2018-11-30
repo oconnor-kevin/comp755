@@ -1,0 +1,213 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2017
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2017}
+
+\usepackage[final]{nips_2017}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2017}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+
+\title{Classification of Breast Cancer Subtypes via Gene Expression}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{
+  Kevin O'Connor  \\
+  Department of Statistics and Operations Research\\
+  University of North Carolina - Chapel Hill\\
+  Chapel Hill, NC \\
+  \texttt{koconn@live.unc.edu} \\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+\begin{abstract}
+Breast cancer subtype identification is an important problem with high clinical relevance. In this paper we use various machine learning methods to predict patients' breast cancer subtype from the measured expression levels of a subset of their genes. It is shown that multinomial logistic regression can achieve a moderate level of accuracy whereas modern classification methods like svm and a fully-connected neural network can achieve far greater results. The performance of each method is then evaluated and compared.
+\end{abstract}
+
+\section{Introduction}
+For many years now, successful treatments for various types of cancers have eluded re- searchers. Breast cancer in particular continues to affect millions of women and men. An important characteristic in the study of breast cancer is the subtype of disease, identified as Luminal A, Luminal B, Basal, HER2, or Normal. For a single tumor, the subtype determines both how the disease may develop in the patient as well as the proper course of treatment. Thus, there is significant incentive for researchers to find distinctive characteristics of each subtype to more clearly identify them in future patients.
+\newline\newline In the past decade, the cost of obtaining genetic information from an individual has decreased substantially. This has led to a boom in the amount of genetic data available in many areas of medicine. In 2005, a database called The Cancer Genome Atlas (TCGA) was established in order to organize this data and make it widely available to researchers around the world for analysis. At this point, the database contains genetic expression levels for over 20,000 genes from patients with tumors in each of the 5 breast cancer subtypes. It offers an excellent opportunity to look for patterns in the genetic data that distinguish the subtypes.
+
+\subsection{Code}
+The code used to perform the analyses was written in R and Python/Keras and can be found at 
+\begin{center}
+\url{https://github.com/oconnor-kevin}
+\end{center}
+
+\subsection{Data}
+The data can be downloaded from the following website,
+\begin{center}
+\url{}
+\end{center}
+
+\section{Related Work}
+\label{related_work}
+
+\section{Experiments}
+\label{experiments}
+
+\subsection{Multinomial Logistic Regression}
+In our first experiment, we will fit a multinomial logistic regression model to the data. Given a sample $X_i \in \mathbb{R}^p$ with label $y_i \in \{1, ..., K\}$ and $K$ coefficient vectors, $\{\beta_1, ..., \beta_K\}$, we can write our model as
+\[ \mathbb{P}(y_i = k) = \frac{\exp\left\{-X_i\beta_k\right\}}{\sum_{k'} \exp\left\{-X_i\beta_{k'}\right\}} \]
+For $n$ independent observations, $X_1, ..., X_n$, this gives us a joint likelihood of the correct classes,
+\[ \mathcal{L}(\beta_1, ..., \beta_K; \{X_i, y_i\}_{i=1}^n) = \prod\limits_{i=1}^n \frac{\exp\left\{-X_i \beta_{y_i}\right\}}{\sum_{k'} \exp\left\{-X_i \beta_{k'}\right\}} \]
+and log-likelihood,
+\[ \mathcal{LL}(\beta_1, ..., \beta_K; \{X_i, y_i\}_{i=1}^n) = \sum\limits_{i=1}^n\bigg[ -X_i \beta_{y_i} - \log\bigg(\sum\limits_{k'} \exp\left\{-X_i \beta_{k'}\right\}\bigg)\bigg] \]
+Then in order to fit the model to the data, we maximize the log-likelihood via gradient ascent to find the maximum likelihood estimator of the parameters $\{\beta_1, ..., \beta_K\}$. Note that care has to be taken when computing the second term in the log-likelihood to avoid numerical overflow.
+
+\subsection{K-means}
+Next we consider an unsupervised learning approach to identify subgroups. We will apply the K-means algorithm to our data to produce 5 clusters which we hope will correspond to breast cancer subtypes.
+
+
+\subsection{SVM}
+Moving on to more modern classification methods, we will apply an SVM. This will attempt to find a boundary in the data space which maximizes the margin between the support vectors from different classes. Unfortunately for this case, SVM's do not generalize well to multi-class classification problems. Some adaptations have been developed which tackle the multi-class case using a \textit{one vs. the rest} approach but we will simplify our problem by just learning to distinguish between a variety of 2-class subtypes of our data.
+
+\subsection{Fully-connected Neural Network}
+While SVM's were for several decades considered to be state of the art in prediction problems, neural networks have surpassed them in the past decade. 
+
+\section{Discussion}
+
+
+\section{Conclusion}
+The \verb+natbib+ package will be loaded for you by default.
+Citations may be author/year or numeric, as long as you maintain
+internal consistency.  As to the format of the references themselves,
+any style is acceptable as long as it is used consistently.
+
+The documentation for \verb+natbib+ may be found at
+\begin{center}
+  \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
+\end{center}
+Of note is the command \verb+\citet+, which produces citations
+appropriate for use in inline text.  For example,
+\begin{verbatim}
+   \citet{hasselmo} investigated\dots
+\end{verbatim}
+produces
+\begin{quote}
+  Hasselmo, et al.\ (1995) investigated\dots
+\end{quote}
+
+If you wish to load the \verb+natbib+ package with options, you may
+add the following before loading the \verb+nips_2017+ package:
+\begin{verbatim}
+   \PassOptionsToPackage{options}{natbib}
+\end{verbatim}
+
+If \verb+natbib+ clashes with another package you load, you can add
+the optional argument \verb+nonatbib+ when loading the style file:
+\begin{verbatim}
+   \usepackage[nonatbib]{nips_2017}
+\end{verbatim}
+
+
+\subsection{Figures}
+
+All artwork must be neat, clean, and legible. Lines should be dark
+enough for purposes of reproduction. The figure number and caption
+always appear after the figure. Place one line space before the figure
+caption and one line space after the figure. The figure caption should
+be lower case (except for first word and proper nouns); figures are
+numbered consecutively.
+
+You may use color figures.  However, it is best for the figure
+captions and the paper body to be legible if the paper is printed in
+either black/white or in color.
+\begin{figure}[h]
+  \centering
+  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
+  \caption{Sample figure caption.}
+\end{figure}
+
+\subsection{Tables}
+
+All tables must be centered, neat, clean and legible.  The table
+number and title always appear before the table.  See
+Table~\ref{sample-table}.
+
+Place one line space before the table title, one line space after the
+table title, and one line space after the table. The table title must
+be lower case (except for first word and proper nouns); tables are
+numbered consecutively.
+
+Note that publication-quality tables \emph{do not contain vertical
+  rules.} We strongly suggest the use of the \verb+booktabs+ package,
+which allows for typesetting high-quality, professional tables:
+\begin{center}
+  \url{https://www.ctan.org/pkg/booktabs}
+\end{center}
+This package was used to typeset Table~\ref{sample-table}.
+
+\begin{table}[t]
+  \caption{Sample table title}
+  \label{sample-table}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \multicolumn{2}{c}{Part}                   \\
+    \cmidrule{1-2}
+    Name     & Description     & Size ($\mu$m) \\
+    \midrule
+    Dendrite & Input terminal  & $\sim$100     \\
+    Axon     & Output terminal & $\sim$10      \\
+    Soma     & Cell body       & up to $10^6$  \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+\subsubsection*{Acknowledgments}
+
+\section*{References}
+
+\small
+
+[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms
+for connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and
+T.K.\ Leen (eds.), {\it Advances in Neural Information Processing
+  Systems 7}, pp.\ 609--616. Cambridge, MA: MIT Press.
+
+[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS:
+  Exploring Realistic Neural Models with the GEneral NEural SImulation
+  System.}  New York: TELOS/Springer--Verlag.
+
+[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of
+learning and recall at excitatory recurrent synapses and cholinergic
+modulation in rat hippocampal region CA3. {\it Journal of
+  Neuroscience} {\bf 15}(7):5249-5262.
+
+\section*{Appendix}
+\subsection*{Data}
+\begin{center}
+  \url{https://cmt.research.microsoft.com/NIPS2017/}
+\end{center}
+
+
+
+\end{document}
