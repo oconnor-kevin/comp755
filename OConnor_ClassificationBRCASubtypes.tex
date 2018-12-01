@@ -98,7 +98,16 @@ Then $c_k$ represents a majority vote of the labels in cluster $k$. Then define 
 Notice that $P \in [0,1]$ and $P$ close to 1 corresponds to more homogeneous clusters. We will use this to evaluate the performance of the K-means algorithm.
 
 \subsection{SVM}
-Moving on to more modern classification methods, we will apply an SVM. This will attempt to find a boundary in the data space which maximizes the margin between the support vectors from different classes. Unfortunately for this case, SVM's do not generalize well to multi-class classification problems. Some adaptations have been developed which tackle the multi-class case using a \textit{one vs. the rest} approach but we will simplify our problem by just learning to distinguish between a variety of 2-class subtypes of our data.
+Moving on to more modern classification methods, we apply an SVM. This attempts to find a boundary in the data space which maximizes the margin between the support vectors from different classes. This is achieved by minimizing the \textit{hinge loss}, 
+\[ L_{\mbox{hinge}}(y, f(\mathbf{x})) = (1 - yf(\mathbf{x}))_+ \]
+where $f(\mathbf{x}) = \mathbf{w}^T \mathbf{x} + w_0$, along with a penalty for the size of the weights, giving us a complete loss function of
+\[ L(\mathbf{w}; \{X_i, y_i\}_{i=1}^n) = \sum\limits_{i=1}^n (1 - y_i (\mathbf{w}^TX_i + w_0))_+ + \frac{1}{2}\|\mathbf{w}\|^2_2 \]
+which is minimized over $\mathbf{w}, w_0 \in \mathbb{R}^p, \mathbb{R}$. Unfortunately as SVM's partition the data space into only two regions, they do not generalize well to multi-class classification problems. In order to apply them to our problem, we try two approaches:
+\begin{enumerate}
+\item Consider a subset of the data with only two classes.
+\item Consider a \textit{one vs rest} classification problem.
+\end{enumerate}
+The two pairs of subtypes considered are Luminal A vs. Luminal B and Her2 vs. Basal. In the one vs rest scheme, we consider predicting the Normal subtype vs. the other four.
 
 \subsection{Fully-connected Neural Network}
 While SVM's were for several decades considered to be state of the art in prediction problems, neural networks have surpassed them in the past decade. Many different kinds of neural networks have been developed for a variety of different prediction problems such as image classification, natural language processing, and time series learning. However, a simple fully-connected network will suffice for our data as there is no sequential or spatial dependencies between the data that might necessitate a more sophisticated network.
@@ -117,6 +126,23 @@ While SVM's were for several decades considered to be state of the art in predic
     \midrule
      Mult. Logistic Regression & \\
 	 FC Neural Network & 53.75\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \caption{2 Class classification accuracy for held out test set with 20\% of data.}
+  \label{class_acc_2}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \multicolumn{3}{c}{\textbf{SVM Classification Accuracy}}                   \\
+    \cmidrule{1-3}
+    \textbf{Subtypes}  & \textbf{Train Accuracy}  & \textbf{Test Accuracy}\\
+    \midrule
+     Luminal A vs. Luminal B & 99.53\% & 98.73\%\\
+	 Her2 vs. Basal &  100.00\% & 96.36\%\\
+	 Normal vs. Rest & 99.27\% & 90.83\%\\
     \bottomrule
   \end{tabular}
 \end{table}

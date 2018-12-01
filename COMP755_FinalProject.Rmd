@@ -242,15 +242,17 @@ init_beta <- matrix(c(0), nrow=p, ncol=n)
 fitted.beta <- grad_descent(init_beta, dat.train, y, max.iter=10)
 predicted_ys_train <- predict_class(fitted.beta, dat.train)
 predicted_ys_test <- predict_class(fitted.beta, dat.test)
-print(paste0("Train error rate: ", mean(predicted_ys_train != y.train)))
-print(paste0("Test error rate: ", mean(predicted_ys_test != y.test)))
+print(paste0("Train accuracy: ", mean(predicted_ys_train == y.train)))
+print(paste0("Test accuracy: ", mean(predicted_ys_test == y.test)))
 ```
 
 # Clustering
-In this section, we will use an unsupervised algorithm to cluster the data. We hope that the clusters will correspond to subgroups of the samples.
+In this section, we will use an unsupervised algorithm to cluster the data. We hope that the clusters will correspond to subgroups of the samples. In order to measure the performance, we will compute the purity.
 
 ```{r kmeans}
 cluster.kmeans <- kmeans(t(dat), 5)
+
+
 ```
 
 
@@ -260,6 +262,7 @@ In this section, we will use an SVM to try to predict subgroup. Unlike te previo
 ```{r svm}
 library(kernlab)
 
+# Subsetting to luminal a and luminal b and splitting data. 
 dat.sub <- cbind(dat.luma, dat.lumb)
 labels.sub <- factor(c(rep(1, ncol(dat.luma)), rep(2, ncol(dat.lumb))))
 train.inds.sub <- sample.int(length(labels.sub), round(0.8*length(labels.sub)))
@@ -268,12 +271,56 @@ dat.sub.test <- dat.sub[,-train.inds.sub]
 y.sub.train <- labels.sub[train.inds.sub]
 y.sub.test <- labels.sub[-train.inds.sub]
 
+# Fitting SVM.
 svm.fit <- ksvm(t(dat.sub.train), y.sub.train)
 train.pred <- predict(svm.fit, t(dat.sub.train))
 test.pred <- predict(svm.fit, t(dat.sub.test))
 
-# Get error rates.
-print(paste0("Train error rate: ", mean(train.pred != y.sub.train)))
-print(paste0("Test error rate: ", mean(test.pred != y.sub.test)))
+# Get accuracy.
+print("Luminal A vs. Luminal B")
+print(paste0("Train accuracy: ", mean(train.pred == y.sub.train)))
+print(paste0("Test accuracy: ", mean(test.pred == y.sub.test)))
+print("")
+
+# Subsetting to luminal a and luminal b and splitting data. 
+dat.sub <- cbind(dat.her2, dat.basal)
+labels.sub <- factor(c(rep(1, ncol(dat.her2)), rep(2, ncol(dat.basal))))
+train.inds.sub <- sample.int(length(labels.sub), round(0.8*length(labels.sub)))
+dat.sub.train <- dat.sub[,train.inds.sub]
+dat.sub.test <- dat.sub[,-train.inds.sub]
+y.sub.train <- labels.sub[train.inds.sub]
+y.sub.test <- labels.sub[-train.inds.sub]
+
+# Fitting SVM.
+svm.fit <- ksvm(t(dat.sub.train), y.sub.train)
+train.pred <- predict(svm.fit, t(dat.sub.train))
+test.pred <- predict(svm.fit, t(dat.sub.test))
+
+# Get accuracy.
+print("Her2 vs. Basal")
+print(paste0("Train accuracy: ", mean(train.pred == y.sub.train)))
+print(paste0("Test accuracy: ", mean(test.pred == y.sub.test)))
+print("")
+
+# Subsetting to luminal a and luminal b and splitting data. 
+dat.sub <- dat
+labels.sub <- factor(c(rep(1, ncol(dat.luma)+ncol(dat.lumb)+ncol(dat.basal)+ncol(dat.her2)), 
+                       rep(2, ncol(dat.normal))))
+train.inds.sub <- sample.int(length(labels.sub), round(0.8*length(labels.sub)))
+dat.sub.train <- dat.sub[,train.inds.sub]
+dat.sub.test <- dat.sub[,-train.inds.sub]
+y.sub.train <- labels.sub[train.inds.sub]
+y.sub.test <- labels.sub[-train.inds.sub]
+
+# Fitting SVM.
+svm.fit <- ksvm(t(dat.sub.train), y.sub.train)
+train.pred <- predict(svm.fit, t(dat.sub.train))
+test.pred <- predict(svm.fit, t(dat.sub.test))
+
+# Get accuracy.
+print("Normal vs. Rest")
+print(paste0("Train accuracy: ", mean(train.pred == y.sub.train)))
+print(paste0("Test accuracy: ", mean(test.pred == y.sub.test)))
+print("")
 ```
 
