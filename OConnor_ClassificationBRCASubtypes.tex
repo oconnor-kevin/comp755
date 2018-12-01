@@ -65,6 +65,7 @@ The data can be downloaded from the following website,
 \begin{center}
 \url{https://portal.gdc.cancer.gov}
 \end{center}
+After filtering to remove genes with low variances and log-transforming, we are left with 1201 samples and 4101 genes. The code for filtering and transforming is included in the repository above.
 
 \section{Experiments}
 \label{experiments}
@@ -97,6 +98,25 @@ Then $c_k$ represents a majority vote of the labels in cluster $k$. Then define 
 \[ P = \sum\limits_{k} \frac{n_{kc_k}}{n} \]
 Notice that $P \in [0,1]$ and $P$ close to 1 corresponds to more homogeneous clusters. We will use this to evaluate the performance of the K-means algorithm.
 
+\begin{table}[t]
+  \caption{Characteristics of clusters resulting from K-means clustering algorithm. (Purity=0.7535)}
+  \label{kmeans}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \multicolumn{3}{c}{K-means Clustering Results}                   \\
+    \cmidrule{1-3}
+    Cluster     & Majority Label     & Size \\
+    \midrule
+    1 & Luminal B & 222 \\
+    2 & Normal & 112 \\
+    3 & Luminal A & 340 \\
+    4 & Basal & 196 \\
+    5 & Luminal A & 331 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \subsection{SVM}
 Moving on to more modern classification methods, we apply an SVM. This attempts to find a boundary in the data space which maximizes the margin between the support vectors from different classes. This is achieved by minimizing the \textit{hinge loss}, 
 \[ L_{\mbox{hinge}}(y, f(\mathbf{x})) = (1 - yf(\mathbf{x}))_+ \]
@@ -109,11 +129,27 @@ which is minimized over $\mathbf{w}, w_0 \in \mathbb{R}^p, \mathbb{R}$. Unfortun
 \end{enumerate}
 The two pairs of subtypes considered are Luminal A vs. Luminal B and Her2 vs. Basal. In the one vs rest scheme, we consider predicting the Normal subtype vs. the other four.
 
+\begin{table}[t]
+  \caption{Binary classification accuracy for SVM on train and test data sets.}
+  \label{class_acc_2}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \multicolumn{3}{c}{\textbf{SVM Classification Accuracy}}                   \\
+    \cmidrule{1-3}
+    \textbf{Subtypes}  & \textbf{Train Accuracy}  & \textbf{Test Accuracy}\\
+    \midrule
+     Luminal A vs. Luminal B & 98.89\% & 91.77\%\\
+	 Her2 vs. Basal &  99.54\% & 98.18\%\\
+	 Normal vs. Rest & 97.91\% & 96.25\%\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \subsection{Fully-connected Neural Network}
 While SVM's were for several decades considered to be state of the art in prediction problems, neural networks have surpassed them in the past decade. Many different kinds of neural networks have been developed for a variety of different prediction problems such as image classification, natural language processing, and time series learning. However, a simple fully-connected network will suffice for our data as there is no sequential or spatial dependencies between the data that might necessitate a more sophisticated network.
 \newline\newline The network we will use has 4 densely connected hidden layers with sizes (1024, 2048, 1024, 512), batch normalization and dropout (with probability 0.5) at each layer, and ReLU activation functions. On the output layer, we have 5 nodes with a softmax activation. Furthermore, we train with 100 epochs and batch size of 20. The weights for the network can be found in the repository at the link in section 1.1.
 
-\section{Discussion}
 \begin{table}[t]
   \caption{Classification accuracy for held out test set with 20\% of data.}
   \label{class_acc}
@@ -124,31 +160,19 @@ While SVM's were for several decades considered to be state of the art in predic
     \cmidrule{1-2}
     Model  & Accuracy  \\
     \midrule
-     Mult. Logistic Regression & \\
+     Mult. Logistic Regression & 48.75\%\\
 	 FC Neural Network & 53.75\% \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\begin{table}[t]
-  \caption{2 Class classification accuracy for held out test set with 20\% of data.}
-  \label{class_acc_2}
-  \centering
-  \begin{tabular}{lll}
-    \toprule
-    \multicolumn{3}{c}{\textbf{SVM Classification Accuracy}}                   \\
-    \cmidrule{1-3}
-    \textbf{Subtypes}  & \textbf{Train Accuracy}  & \textbf{Test Accuracy}\\
-    \midrule
-     Luminal A vs. Luminal B & 99.53\% & 98.73\%\\
-	 Her2 vs. Basal &  100.00\% & 96.36\%\\
-	 Normal vs. Rest & 99.27\% & 90.83\%\\
-    \bottomrule
-  \end{tabular}
-\end{table}
+\section{Discussion}
+We have seen that the problem of classifying breast cancer subtype using gene expression can be posed and solved in various ways. The simple approach of trying to learn a map between input data points to subtype labels is taken by both the multinomial logistic regression (MLR) model and fully-connected neural network (FC NN). A comparison of their results can be found in Table 3. We see that while the neural network does improve performance, it does not do so significantly. This is especially true when considering that the FC NN model requires many thousands of parameters more than the MLR model. This was a somewhat surprising result as FC NN's often attain much greater classification accuracy with other data. However, the FC NN model used here could almost certainly be improved by altering the architecture and tuning hyperparameters in a systematic way, so these results should not be thought of as an upper bound on the performance of such a model.
+\newline\newline Stated slightly differently, one may alternatively think of the problem as trying to distinguish subtypes as clusters in the data space. This is accomplished by the K-means algorithm. Table 1 contains the results from applying the algorithm to the breast cancer data. We see that, based on a majority vote of its members, the clusters roughly correspond to subtype. Further evidence of this is given by the purity which was computed to be 0.7535 indicating that the clusters were substantially homogeneous and thus subtypes were fairly distinguishable.
+\newline\newline Finally, we may pose our problem as a binary classification problem, either trying to distinguish between just two of the subtypes, or distinguish one subtype from the rest. This was accomplished by the SVM approach. We found that an SVM was able to achieve classification accuracy greater than 90\% in all three test sets. This suggests that an SVM approach is a powerful method for solving the problem stated as a binary classification problem.
 
 \section{Conclusion}
-In this document, we investigated a number of different classification methods for identifying breast cancer subtype using gene expression. We saw that even older methods like multinomial logistic regression and K-means were able to predict subtype with a moderate level accuracy. Furthermore, it was observed that the more modern methods like an SVM and a fully-connected neural network yielded an improvement in predictive performance as expected.
+In this paper, we investigated a number of different classification methods for identifying breast cancer subtype using gene expression. We saw that even older methods like multinomial logistic regression and K-means were able to distinguish subtypes fairly well. Furthermore, it was observed that the more modern methods like an SVM and a fully-connected neural network yielded an improvement in performance as expected.
 
 \subsubsection*{Acknowledgments}
 Thank you to my girlfriend, Cambria, for giving up our Friday night together so I can finish this project!
@@ -156,10 +180,9 @@ Thank you to my girlfriend, Cambria, for giving up our Friday night together so 
 \section*{References}
 
 \small
+[1] Chollet, Francois. ``Deep Learning with Python". Manning Publications Co., 2017.
 
-[1] Murphy, Kevin P. "Machine Learning: A Probabilistic Perspective. Adaptive Computation and Machine Learning." (2012).
-
-[2] Chollet, Francois. Deep learning with python. Manning Publications Co., 2017.
+[2] Murphy, Kevin P. ``Machine Learning: A Probabilistic Perspective. Adaptive Computation and Machine Learning." (2012).
 
 \end{document}
 

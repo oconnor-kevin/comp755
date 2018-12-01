@@ -16,13 +16,11 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(knitr)
 library(R.utils)
-library(dplyr)
 library(limma)
 
-sourceDirectory("/Users/kevinoconnor/Documents/Research/DCM/Differential-Correlation-Mining/DCM/R")
-sourceDirectory("/Users/kevinoconnor/Documents/Research/DCM/Differential-Correlation-Mining/Utils")
 data.dir <- file.path("/Users/kevinoconnor/Documents/Research/DCM/Data")
 home.dir <- file.path("/Users/kevinoconnor/Documents/School/COMP_755")
+sourceDirectory(home.dir)
 
 # Reading data.
 if(!(exists("SeqData") & exists("sampleTab"))){
@@ -44,9 +42,21 @@ dataM0  <- apply(data, 2, as.numeric)
 rownames(dataM0) <- as.vector(gene.names)
 
 # Filter and transform data.
-dataM <- filter_data(dataM0,
-                     min.var=100,
-                     max.var=10000)
+dataM <- filter_data(dataM0, min.var=100, max.var=10000)
+
+# Standardize columns.
+stdize <- function(gene){
+  # Make zero mean.
+  gene <- gene - mean(gene)
+  # Make sum of squares one.
+  gene <- gene/sqrt(sum(gene^2))
+  return(gene)
+}
+
+dataM.std <- dataM
+for(c in 1:ncol(dataM)){
+  dataM.std[,c] <- stdize(dataM[,c])
+}
 
 # Create matrix for each group.
 tar <- samTab0$Call
@@ -55,54 +65,14 @@ wla <- which(tar=="LumA")
 wlb <- which(tar=="LumB")
 wh <- which(tar=="Her2")
 wn <- which(tar=="Normal")
-MAM.basal  <- dataM[, wb]
-MAM.LA     <- dataM[, wla]
-MAM.LB     <- dataM[, wlb]
-MAM.her2   <- dataM[, wh]
-MAM.normal <- dataM[, wn]
 
-# Standardize row within each group.
-stdize <- function(gene){
-  # Make zero mean.
-  gene <- gene - mean(gene)
-  
-  # Make sum of squares one.
-  gene <- gene/sqrt(sum(gene^2))
-  
-  return(gene)
-}
+dat.luma   <- dataM.std[, wla]
+dat.lumb   <- dataM.std[, wlb]
+dat.basal  <- dataM.std[, wb]
+dat.her2   <- dataM.std[, wh]
+dat.normal <- dataM.std[, wn]
 
-MAM.LA.std <- MAM.LA
-for(r in 1:nrow(MAM.LA)){
-  MAM.LA.std[r,] <- stdize(MAM.LA[r,])
-}
-
-MAM.LB.std <- MAM.LB
-for(r in 1:nrow(MAM.LB)){
-  MAM.LB.std[r,] <- stdize(MAM.LB[r,])
-}
-
-MAM.basal.std <- MAM.basal
-for(r in 1:nrow(MAM.basal)){
-  MAM.basal.std[r,] <- stdize(MAM.basal[r,])
-}
-
-MAM.her2.std <- MAM.her2
-for(r in 1:nrow(MAM.her2)){
-  MAM.her2.std[r,] <- stdize(MAM.her2[r,])
-}
-
-MAM.normal.std <- MAM.normal
-for(r in 1:nrow(MAM.normal)){
-  MAM.normal.std[r,] <- stdize(MAM.normal[r,])
-}
-
-dat.luma   <- MAM.LA.std
-dat.lumb   <- MAM.LB.std
-dat.basal  <- MAM.basal.std
-dat.her2   <- MAM.her2.std
-dat.normal <- MAM.normal.std
-
+# Save separate data matrices for use in python.
 write.table(dat.luma, file=file.path(home.dir, "luma.csv"), row.names=FALSE, col.names=FALSE, sep=",")
 write.table(dat.lumb, file=file.path(home.dir, "lumb.csv"), row.names=FALSE, col.names=FALSE, sep=",")
 write.table(dat.basal, file=file.path(home.dir, "basal.csv"), row.names=FALSE, col.names=FALSE, sep=",")
@@ -116,7 +86,7 @@ After reading in the data and removing genes with extremely small or large varia
 kable(data.frame(group=c("Luminal A", "Luminal B", "Basal", "Normal", "HER2"), sample.size=c(ncol(dat.luma), ncol(dat.lumb), ncol(dat.basal), ncol(dat.normal), ncol(dat.her2))))
 ```
 
-Yielding a total sample size of n=`r ncol(dat.luma)+ncol(dat.lumb)+ncol(dat.basal)+ncol(dat.normal)+ncol(dat.her2)`. Note that we have normalized the rows of each dataset.
+Yielding a total sample size of n=`r ncol(dat.luma)+ncol(dat.lumb)+ncol(dat.basal)+ncol(dat.normal)+ncol(dat.her2)`. Note that we have normalized the columns of each dataset.
 
 Quickly, we will split the data up into a training and test sets.
 ```{r split_data}
@@ -138,9 +108,9 @@ y.test <- labels[-train.inds]
 # Multinomial Logistic Regression
 
 First we will perform logistic regression to try and predict the subgroup which a given set of gene expression values belongs to. We can write our model as
-\[ \mathbb{P}(y_i = k | X_i, \beta) = \frac{\exp\left\{-X_i \beta_k\right\}}{\sum_{k'} \exp\left\{-X_i \beta_{k'}\right\}}\]
+\[ \mathbb{P}(y_i = k | X_i, \beta) = \frac{\exp\left\{X_i \beta_k\right\}}{\sum_{k'} \exp\left\{X_i \beta_{k'}\right\}}\]
 Which gives a negative log-likelihood of
-\[ \mathcal{NLL}(\beta) = \sum\limits_{i=1}^n -X_i \beta_k - \sum\limits_{i=1}^n \log\bigg(\sum\limits_{k'} \exp\left\{-X_i \beta_{k'}\right\}\bigg) \]
+\[ \mathcal{NLL}(\beta) = \sum\limits_{i=1}^n -X_i \beta_k - \sum\limits_{i=1}^n \log\bigg(\sum\limits_{k'} \exp\left\{X_i \beta_{k'}\right\}\bigg) \]
 
 ```{r neg_log_lkhd}
 neg_log_likelihood <- function(beta, X){
@@ -189,8 +159,6 @@ get_log_likelihood_w_pen <- function(beta, X, y, pen_type="l1", lambda=0){
   
   return(nll + pen)
 }
-
-# TODO: A test (?)
 ```
 
 Next we will need an implementation of gradient descent to use for fitting.
@@ -199,6 +167,7 @@ Next we will need an implementation of gradient descent to use for fitting.
 compute_grad <- function(beta, X, y, pen_type="l1", lambda, delta=1e-4){
   # Initialize matrix of gradients.
   grad_mat <- beta
+  # Numerically compute gradients of each element of beta.
   for (i in nrow(beta)){
     for (j in ncol(beta)){
       l_beta <- r_beta <- beta
@@ -210,27 +179,32 @@ compute_grad <- function(beta, X, y, pen_type="l1", lambda, delta=1e-4){
   return(grad_mat)
 }
 
-grad_descent <- function(init_beta, X, y, pen_type="l1", lambda=0, delta=1e-4, learning_rate=1e-2, max.iter=10){
+grad_descent <- function(init_beta, 
+                         X, 
+                         y, 
+                         pen_type="l1", 
+                         lambda=0, 
+                         delta=1e-4, 
+                         learning_rate=1e-2, 
+                         max.iter=10){
+  # Initialize beta.
   beta <- init_beta
-  
+  # Iteratively compute gradient and update beta.
   for(i in 1:max.iter){
-    if(i %% 1 == 0){print(paste0("Completed ", i, " iterations..."))}
+    print(paste0("Completed ", i, " iterations..."))
     grad_mat <- compute_grad(beta, X, y, pen_type, lambda, delta)  
-    
+    # Update beta.
     beta <- beta - learning_rate*grad_mat
   }
-  
   return(beta)
 }
 
 predict_class <- function(beta, X){
   # beta is p by K
   # X is p by n.
-  
   predictions <- sapply(1:ncol(X), function(c){
     return(which.max(-t(beta) %*% X[,c]))
   })
-  
   return(predictions)
 }
 ```
@@ -239,7 +213,7 @@ Ok, now we can fit a multinomial logit model to our data.
 
 ```{r fit_multlogit}
 init_beta <- matrix(c(0), nrow=p, ncol=n)
-fitted.beta <- grad_descent(init_beta, dat.train, y, max.iter=10)
+fitted.beta <- grad_descent(init_beta, dat.train, y.train, max.iter=10)
 predicted_ys_train <- predict_class(fitted.beta, dat.train)
 predicted_ys_test <- predict_class(fitted.beta, dat.test)
 print(paste0("Train accuracy: ", mean(predicted_ys_train == y.train)))
@@ -252,12 +226,44 @@ In this section, we will use an unsupervised algorithm to cluster the data. We h
 ```{r kmeans}
 cluster.kmeans <- kmeans(t(dat), 5)
 
+purity <- function(clusters, labels){
+  # Takes in a vector of clusters and vector of labels and computes the purity
+  # as defined in the paper. This function assumes that the i'th element of 
+  # clusters and i'th element of labels correspond to the same data point.
+  cluster.labels <- c()
+  n.k <- c()
+  k <- length(unique(clusters))
+  n <- length(clusters)
+  
+  for(i in 1:k){
+    # Get label for each cluster.
+    labels.i <- labels[which(clusters==i)]
+    max.label.i <- which.max(tabulate(labels.i))
+    cluster.labels <- c(cluster.labels, max.label.i)
+    
+    # Get count of maximal label.
+    n.k <- c(n.k, length(which(labels.i==max.label.i)))
+  }
+  
+  return(list("cluster.labels"=cluster.labels, "purity"=sum(n.k/n)))
+}
 
+clusters <- cluster.kmeans$cluster
+pur.out <- purity(clusters, labels)
+pur <- pur.out$"purity"
+cluster.labels <- pur.out$"cluster.labels"
+
+print(paste0("Cluster 1 size: ", length(which(clusters==1)), ", label: ", cluster.labels[1]))
+print(paste0("Cluster 2 size: ", length(which(clusters==2)), ", label: ", cluster.labels[2]))
+print(paste0("Cluster 3 size: ", length(which(clusters==3)), ", label: ", cluster.labels[3]))
+print(paste0("Cluster 4 size: ", length(which(clusters==4)), ", label: ", cluster.labels[4]))
+print(paste0("Cluster 5 size: ", length(which(clusters==5)), ", label: ", cluster.labels[5]))
+print(paste0("Observed purity: ", pur))
 ```
 
 
 # SVM
-In this section, we will use an SVM to try to predict subgroup. Unlike te previous two methods, SVM's are not easily adaptable to multiclass classification. So we will consider the simpler problem of distinguishing between the Luminal A and Luminal B.
+In this section, we will use an SVM to try to predict subgroup. Unlike the previous two methods, SVM's are not easily adaptable to multiclass classification. So we will consider the simpler problem of distinguishing between the Luminal A and Luminal B.
 
 ```{r svm}
 library(kernlab)
@@ -323,4 +329,3 @@ print(paste0("Train accuracy: ", mean(train.pred == y.sub.train)))
 print(paste0("Test accuracy: ", mean(test.pred == y.sub.test)))
 print("")
 ```
-
