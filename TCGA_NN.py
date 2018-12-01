@@ -66,13 +66,13 @@ model.add(Dense(num_classes))
 model.add(Activation('softmax'))
 
 
-model.compile(optimizer=optimizers.RMSprop(lr=2e-5),
+model.compile(optimizer=optimizers.RMSprop(lr=2e-6),
               loss='categorical_crossentropy',
               metrics=['acc'])
 
 history = model.fit(x_train,
                     y_train,
-                    epochs=30,
+                    epochs=100,
                     batch_size=20,
                     validation_data=(x_test, y_test))
 
@@ -81,3 +81,4 @@ val_acc = history.history['val_acc']
 loss = history.history['loss']
 val_loss = history.history['val_loss']
 
+model.save_weights('/Users/kevinoconnor/Documents/School/COMP_755/tcga_weights.h5')

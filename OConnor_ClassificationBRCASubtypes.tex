@@ -57,113 +57,87 @@ For many years now, successful treatments for various types of cancers have elud
 \subsection{Code}
 The code used to perform the analyses was written in R and Python/Keras and can be found at 
 \begin{center}
-\url{https://github.com/oconnor-kevin}
+\url{https://github.com/oconnor-kevin/comp755}
 \end{center}
 
 \subsection{Data}
 The data can be downloaded from the following website,
 \begin{center}
-\url{}
+\url{https://portal.gdc.cancer.gov}
 \end{center}
-
-\section{Related Work}
-\label{related_work}
 
 \section{Experiments}
 \label{experiments}
 
 \subsection{Multinomial Logistic Regression}
-In our first experiment, we will fit a multinomial logistic regression model to the data. Given a sample $X_i \in \mathbb{R}^p$ with label $y_i \in \{1, ..., K\}$ and $K$ coefficient vectors, $\{\beta_1, ..., \beta_K\}$, we can write our model as
-\[ \mathbb{P}(y_i = k) = \frac{\exp\left\{-X_i\beta_k\right\}}{\sum_{k'} \exp\left\{-X_i\beta_{k'}\right\}} \]
+In our first experiment, we will fit a multinomial logistic regression model to the data. 
+\subsubsection{The Model}
+Given a sample $X_i \in \mathbb{R}^p$ with label $y_i \in \{1, ..., K\}$ and $K$ coefficient vectors, $\{\beta_1, ..., \beta_K\}$, we can write our model as
+\[ \mathbb{P}(y_i = k) = \frac{\exp\left\{X_i\beta_k\right\}}{\sum_{k'} \exp\left\{X_i\beta_{k'}\right\}} \]
 For $n$ independent observations, $X_1, ..., X_n$, this gives us a joint likelihood of the correct classes,
-\[ \mathcal{L}(\beta_1, ..., \beta_K; \{X_i, y_i\}_{i=1}^n) = \prod\limits_{i=1}^n \frac{\exp\left\{-X_i \beta_{y_i}\right\}}{\sum_{k'} \exp\left\{-X_i \beta_{k'}\right\}} \]
+\[ \mathcal{L}(\beta_1, ..., \beta_K; \{X_i, y_i\}_{i=1}^n) = \prod\limits_{i=1}^n \frac{\exp\left\{X_i \beta_{y_i}\right\}}{\sum_{k'} \exp\left\{X_i \beta_{k'}\right\}} \]
 and log-likelihood,
-\[ \mathcal{LL}(\beta_1, ..., \beta_K; \{X_i, y_i\}_{i=1}^n) = \sum\limits_{i=1}^n\bigg[ -X_i \beta_{y_i} - \log\bigg(\sum\limits_{k'} \exp\left\{-X_i \beta_{k'}\right\}\bigg)\bigg] \]
-Then in order to fit the model to the data, we maximize the log-likelihood via gradient ascent to find the maximum likelihood estimator of the parameters $\{\beta_1, ..., \beta_K\}$. Note that care has to be taken when computing the second term in the log-likelihood to avoid numerical overflow.
+\[ \mathcal{NLL}(\beta_1, ..., \beta_K; \{X_i, y_i\}_{i=1}^n) = -\sum\limits_{i=1}^n\bigg[ X_i \beta_{y_i} + \log\bigg(\sum\limits_{k'} \exp\left\{X_i \beta_{k'}\right\}\bigg)\bigg] \]
+\subsubsection{Training}
+In order to fit the model to the data, we minimize the negative log-likelihood via gradient descent to find the maximum likelihood estimator of the parameters $\{\beta_1, ..., \beta_K\}$. Note that care has to be taken when computing the second term in the log-likelihood to avoid numerical overflow.
 
 \subsection{K-means}
-Next we consider an unsupervised learning approach to identify subgroups. We will apply the K-means algorithm to our data to produce 5 clusters which we hope will correspond to breast cancer subtypes.
-
+Next we consider an unsupervised learning approach to identify subgroups. We will apply the K-means algorithm to our data to produce 5 clusters which we hope will correspond to breast cancer subtypes. 
+\subsubsection{The Algorithm}
+In this algorithm, we start by randomly initializing the means of each cluster, $\{\hat{m}^0_1, ..., \hat{m}^0_5\}$. Then at iteration $t$, assign point $i$ to the cluster with the closest mean,
+\[ \hat{y}_i^t = \mbox{argmin}_k \|X_i - \hat{m}^{t-1}_k\|_2 \]
+recomputing the means of the newly clustered data after each iteration,
+\[ \hat{m}^t_k = \frac{1}{n^t_k}\sum\limits_{i: \hat{y}_i^t = k} X_i \]
+where $n_k^t$ is the number of points in cluster $k$ at iteration $t$. This is repeated until convergence or some maximum number of iterations is reached.
+\subsubsection{Purity}
+As this is an unsupervised clustering algorithm, the output won't specify which cluster corresponds to which subtype. If we did know this, it would be straightforward to compute the classification accuracy. But as this is not known, we need to think more carefully about how to evaluate the performance of the algorithm.
+\newline\newline One option is to compute the purity. From a high level, the purity measures how homogeneous the clusters that have been found are. Specifically, let $n_{kl}$ be the number of elements in cluster $k$ which belong to subtype $l$. Then associate a label with cluster $k$,
+\[ c_k = \mbox{argmax}_l n_{kl} \]
+Then $c_k$ represents a majority vote of the labels in cluster $k$. Then define purity, $P$,
+\[ P = \sum\limits_{k} \frac{n_{kc_k}}{n} \]
+Notice that $P \in [0,1]$ and $P$ close to 1 corresponds to more homogeneous clusters. We will use this to evaluate the performance of the K-means algorithm.
 
 \subsection{SVM}
 Moving on to more modern classification methods, we will apply an SVM. This will attempt to find a boundary in the data space which maximizes the margin between the support vectors from different classes. Unfortunately for this case, SVM's do not generalize well to multi-class classification problems. Some adaptations have been developed which tackle the multi-class case using a \textit{one vs. the rest} approach but we will simplify our problem by just learning to distinguish between a variety of 2-class subtypes of our data.
 
 \subsection{Fully-connected Neural Network}
-While SVM's were for several decades considered to be state of the art in prediction problems, neural networks have surpassed them in the past decade. 
+While SVM's were for several decades considered to be state of the art in prediction problems, neural networks have surpassed them in the past decade. Many different kinds of neural networks have been developed for a variety of different prediction problems such as image classification, natural language processing, and time series learning. However, a simple fully-connected network will suffice for our data as there is no sequential or spatial dependencies between the data that might necessitate a more sophisticated network.
+\newline\newline The network we will use has 4 densely connected hidden layers with sizes (1024, 2048, 1024, 512), batch normalization and dropout (with probability 0.5) at each layer, and ReLU activation functions. On the output layer, we have 5 nodes with a softmax activation. Furthermore, we train with 100 epochs and batch size of 20. The weights for the network can be found in the repository at the link in section 1.1.
 
 \section{Discussion}
-
+\begin{table}[t]
+  \caption{Classification accuracy for held out test set with 20\% of data.}
+  \label{class_acc}
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    \multicolumn{2}{c}{Classification Accuracy}                   \\
+    \cmidrule{1-2}
+    Model  & Accuracy  \\
+    \midrule
+     Mult. Logistic Regression & \\
+	 FC Neural Network & 53.75\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Conclusion}
-The \verb+natbib+ package will be loaded for you by default.
-Citations may be author/year or numeric, as long as you maintain
-internal consistency.  As to the format of the references themselves,
-any style is acceptable as long as it is used consistently.
+In this document, we investigated a number of different classification methods for identifying breast cancer subtype using gene expression. We saw that even older methods like multinomial logistic regression and K-means were able to predict subtype with a moderate level accuracy. Furthermore, it was observed that the more modern methods like an SVM and a fully-connected neural network yielded an improvement in predictive performance as expected.
 
-The documentation for \verb+natbib+ may be found at
-\begin{center}
-  \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
-\end{center}
-Of note is the command \verb+\citet+, which produces citations
-appropriate for use in inline text.  For example,
-\begin{verbatim}
-   \citet{hasselmo} investigated\dots
-\end{verbatim}
-produces
-\begin{quote}
-  Hasselmo, et al.\ (1995) investigated\dots
-\end{quote}
+\subsubsection*{Acknowledgments}
+Thank you to my girlfriend, Cambria, for giving up our Friday night together so I can finish this project!
 
-If you wish to load the \verb+natbib+ package with options, you may
-add the following before loading the \verb+nips_2017+ package:
-\begin{verbatim}
-   \PassOptionsToPackage{options}{natbib}
-\end{verbatim}
+\section*{References}
 
-If \verb+natbib+ clashes with another package you load, you can add
-the optional argument \verb+nonatbib+ when loading the style file:
-\begin{verbatim}
-   \usepackage[nonatbib]{nips_2017}
-\end{verbatim}
+\small
 
+[1] Murphy, Kevin P. "Machine Learning: A Probabilistic Perspective. Adaptive Computation and Machine Learning." (2012).
 
-\subsection{Figures}
+[2] Chollet, Francois. Deep learning with python. Manning Publications Co., 2017.
 
-All artwork must be neat, clean, and legible. Lines should be dark
-enough for purposes of reproduction. The figure number and caption
-always appear after the figure. Place one line space before the figure
-caption and one line space after the figure. The figure caption should
-be lower case (except for first word and proper nouns); figures are
-numbered consecutively.
+\end{document}
 
-You may use color figures.  However, it is best for the figure
-captions and the paper body to be legible if the paper is printed in
-either black/white or in color.
-\begin{figure}[h]
-  \centering
-  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-  \caption{Sample figure caption.}
-\end{figure}
-
-\subsection{Tables}
-
-All tables must be centered, neat, clean and legible.  The table
-number and title always appear before the table.  See
-Table~\ref{sample-table}.
-
-Place one line space before the table title, one line space after the
-table title, and one line space after the table. The table title must
-be lower case (except for first word and proper nouns); tables are
-numbered consecutively.
-
-Note that publication-quality tables \emph{do not contain vertical
-  rules.} We strongly suggest the use of the \verb+booktabs+ package,
-which allows for typesetting high-quality, professional tables:
-\begin{center}
-  \url{https://www.ctan.org/pkg/booktabs}
-\end{center}
-This package was used to typeset Table~\ref{sample-table}.
-
+%% Tables
 \begin{table}[t]
   \caption{Sample table title}
   \label{sample-table}
@@ -182,32 +156,9 @@ This package was used to typeset Table~\ref{sample-table}.
 \end{table}
 
 
-\subsubsection*{Acknowledgments}
-
-\section*{References}
-
-\small
-
-[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms
-for connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and
-T.K.\ Leen (eds.), {\it Advances in Neural Information Processing
-  Systems 7}, pp.\ 609--616. Cambridge, MA: MIT Press.
-
-[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS:
-  Exploring Realistic Neural Models with the GEneral NEural SImulation
-  System.}  New York: TELOS/Springer--Verlag.
-
-[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of
-learning and recall at excitatory recurrent synapses and cholinergic
-modulation in rat hippocampal region CA3. {\it Journal of
-  Neuroscience} {\bf 15}(7):5249-5262.
-
-\section*{Appendix}
-\subsection*{Data}
-\begin{center}
-  \url{https://cmt.research.microsoft.com/NIPS2017/}
-\end{center}
-
-
-
-\end{document}
+%% Figures
+\begin{figure}[h]
+  \centering
+  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
+  \caption{Sample figure caption.}
+\end{figure}
